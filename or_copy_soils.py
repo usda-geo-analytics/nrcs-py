@@ -1,7 +1,7 @@
 # Really I will fill in the important comments later
 
 # Comments on server naming conventions and what we can assume:
-# Example server_name: aioorpo23fp1
+# State office server_name: aioorpo23fp1
 # aio | or | po2 | 3fp1
 # Prefix (always the same): server_name[:3] = "aio"
 # State abbr: server_name[3:5] = "or"
@@ -17,7 +17,7 @@ import os
 from pathlib import Path
 import datetime
 import shutil
-#import arcpy
+import arcpy
 
 
 ########## ########## ########## ########## ########## ########## 
@@ -47,11 +47,13 @@ fy_stamp = "_FY24"
 # NON-INPUT PARAMETERS
 
 # Provides datestamp string in the format of "_YYYYMMDD", ready to append
-date_stamp = datetime.datetime.now().strftime("_%Y%m%d")
+date_stamp = datetime.datetime.now().strftime("_%Y%m")
 
-# List to hold all the dirs that we need to clean up for testing
-cleanup_list = []
+# To avoid hard-coded strings everywhere
+mdb = ".mdb"
+shp = ".shp"
 
+prefixes = {mdb: "soil_d_", shp: "soilmu_a_"}
 
 
 ########## ########## ########## ########## ########## ########## 
@@ -79,31 +81,17 @@ def get_mothership_dirs():
     # (after flattening, before doling to FOs)
     mdb_dir = Path(get_root(mothership), "FOTG", "Section_II", "FY24")
 
-    # Since we'll be copying TO this dir, needs to be
-    # cleaned up regularly during testing
-    cleanup_list.append(mdb_dir)
-
     # shps don't need flattening, so this is their original location
-    shp_dir = Path(get_root(mothership), "geodata", "soils", "FY24")
+    shp_dir = Path(get_root(mothership), "geodata", "soils")
 
-    mothership_dirs = {"download": download_dir, ".mdb": mdb_dir, ".shp": shp_dir}
+    mothership_dirs = {"download": download_dir, mdb: mdb_dir, shp: shp_dir}
+
+    # Print All The Things to make sure our output is what we expect
+    print("\nOutput of get_mothership_dirs() (var mothership_dirs):")
+    for k, v in mothership_dirs.items():
+        print(f"\tKey: {k}, value: {v}")
 
     return mothership_dirs
-
-
-
-########## ########## ########## 
-
-def copy_file(in_file, to_dir):
-
-    # TO DO: the Thing.
-    try:
-        shutil.copy(in_file, to_dir)
-
-    # YES I KNOW...will expand later
-    except Exception as e:
-        print(e)
-
 
 
 ########## ########## ########## 
@@ -112,17 +100,33 @@ def copy_file(in_file, to_dir):
 # and consolidate them into one dir
 def consolidate_mdbs(mothership_dirs):
 
+    # Make the new FY dir if it does not already exist
+    os.makedirs(mothership_dirs[mdb], exist_ok= True)
+
     # [0] is the downloads dir
     for root, dirs, files in os.walk(mothership_dirs["download"]):
 
-        if files:
-            for f in files:
+        # Can't iterate files that aren't there
+        if not files:
+            continue
 
-                # TO DO: additional logic here to narrow down search!
-                if f.endswith(".mdb"):
-                    fullpath = os.path.join(root, f)
+        # Otherwise (if there are files), iterate
+        for fi in files:
 
-                    copy_file(fullpath, mothership_dirs[".mdb"])
+            if fi.endswith(mdb) and fi.startswith(prefixes[mdb]):
+
+                # Full path to the file I want to consolidate
+                from_path = Path(root, fi)
+
+                to_path = Path(mothership_dirs[mdb], f"{fy_stamp}.".join(fi.rsplit(".", 1)))
+
+                # Do the copy thing
+                try:
+                    shutil.copy(from_path, to_path)
+
+                # YES I KNOW...will expand later
+                except Exception as e:
+                    print(e)
 
 
 
@@ -130,7 +134,8 @@ def consolidate_mdbs(mothership_dirs):
 
 def get_filepaths(mothership_dirs):
 
-    filepaths_dict = {}
+    # Initialize a dict of dicts
+    filepaths = {mdb: {}, shp: {}}
 
     for k, v in mothership_dirs.items():
 
@@ -138,10 +143,97 @@ def get_filepaths(mothership_dirs):
         if k == "download":
             continue
 
-        filepaths_dict[k] = [Path(v, f) for f in os.listdir(v) if f.endswith(k)]
+        # I don't need to do anything more with the mdbs since they've 
+        # already been FY-stamped when they were consolidated
+        elif k == mdb:
 
-    return filepaths_dict
+            # Make a list of the full paths of the mdb files to be copied
+            prepaths = [str(Path(v, f)) for f in os.listdir(v) if f.endswith(k)]
 
+            # Now I need that 5-char code within these preprepaths to use
+            # as the key to the list of all the filepaths
+            for p in prepaths:
+
+                # Chop it at "soil_d_"
+                chop = p.split(prefixes[mdb])
+
+                # If it had "soil_d_" in it...
+                if len(chop) > 1:
+
+                    # ...Stuff the full filepath in a list as a value in a dict
+                    # where the 5-char code is the key; this facilitates easy lookup later
+                    filepaths[k][chop[1][:5]] = [p]
+
+        elif k == shp:
+
+            # NOTE: THIS GETS ALL THE FILES IN THE DIRECTORY...
+            preprepaths = [str(Path(v, f)) for f in os.listdir(v) if prefixes[shp] in f]
+
+            prepaths = []
+
+            # But for shps we still need to apply our datestamp...
+            for p in preprepaths:
+
+                # If the file hasn't already been datestamped, stamp it
+                if not date_stamp in p:
+
+                    # Of course the xml file has to be the special snowflake
+                    # with two periods and two go#dam# extensions...
+                    if p.endswith(".xml"):
+                        
+                        # The "fake" period in the xml always preceeds .shp, sooo:
+                        dated = f"{date_stamp}.shp".join(p.rsplit(shp, 1))
+
+                    else:
+                        # Chop up the path, add in the date stamp and zip it back up again
+                        # This of course just builds the correct string...
+                        dated = f"{date_stamp}.".join(p.rsplit(".", 1))
+
+                    # ...Can't forget to actually rename the file itself
+                    os.replace(p, dated)
+
+                # Otherwise if the file already has the datestamp, it's all good
+                else:
+                    dated = p
+
+                prepaths.append(dated)
+            
+            for p in prepaths:
+
+                # Chop it at "soilmu_a_"
+                chop = p.split(prefixes[shp])
+
+                # If it had "soilmu_a_" in it...
+                if len(chop) > 1:
+
+                    # Assign 5-char code to var
+                    # since there's way too much crap going on here
+                    key_code = chop[1][:5]
+
+                    # ...Stuff the full filepath in a list as a value in a dict
+                    # where the 5-char code is the key; this facilitates easy lookup later
+                    # If the key code isn't already in the dict, add and add the first full path
+                    # as first item in the list that is the val
+                    if not key_code in filepaths[k]:
+                        filepaths[k][key_code] = [p]
+
+                    # If the key code is already in the dict, append this file path
+                    # to list located at this key
+                    else:
+                        filepaths[k][key_code].append(p)
+
+
+    # Print All The Things to make sure our output is what we expect
+    print(f"\nOutput of get_filepaths (var filepaths):")
+
+    for k, val in filepaths.items():
+        print(f"\tKey: {k}, Values:")
+        for x, y in val.items():
+            print(f"\t\tSubkey: {x}, Values:")
+            for x in y:
+                print(f"\t\t\t{x}")
+                  
+    return filepaths
 
 
 ########## ########## ########## 
@@ -161,11 +253,10 @@ def get_satellites(satellite_source):
         if m in satellite_list:
             satellite_list.remove(m)
 
-        # TO DO: an else statement here because the mothership SHOULD
-        # be among the satellites in the heirarchy
-
     # Assumes that for the Real Deal the satellite host names come from
     # either a feature class or feature service URL
+    # TO DO...figure out why import of arcpy is not working,
+    # even if ArcGIS Pro is open etc.
     else:
 
         search_field = "name_of_the_field"
@@ -177,8 +268,10 @@ def get_satellites(satellite_source):
         if mothership in satellite_list:
             satellite_list.remove(mothership)
 
-        # TO DO: an else statement here because the mothership SHOULD
-        # be among the satellites in the heirarchy
+    # Print All The Things to make sure our output is what we expect
+    print("\nOutput of get_satellites (satellite_list):")
+    for s in satellite_list:
+        print(f"\t{s}")
 
     return satellite_list
 
@@ -192,9 +285,11 @@ def get_satellite_dirs(satellite):
 
     shp_dir = Path(get_root(satellite), "geodata", "soils")
 
-    satellite_dirs = {".mdb": mdb_dir, ".shp": shp_dir}
+    satellite_dirs = {mdb: mdb_dir, shp: shp_dir}
 
-    print(satellite_dirs)
+    print(f"\nOutput of get_satellite_dirs({satellite}):")
+    for k, v in satellite_dirs.items():
+        print(f"\tKey: {k}, value: {v}")
 
     return satellite_dirs
 
@@ -202,19 +297,89 @@ def get_satellite_dirs(satellite):
 
 ########## ########## ########## 
 
-def get_sat_required():
+# Figure out which fo need which files
+def get_sat_required(satellite_dirs, sat):
 
-    sat_required = []
+    sat_required = {}
 
-    # TO  DO: figure out which fo need which files
-    # MAKE SURE TO COPY NEW FILES FIRST BEFORE DELETING OLD
+    for k, v in satellite_dirs.items():
 
+        current_files = [f for f in os.listdir(v) if f.endswith(k)]
 
-    # ***** YOU ARE HERE ***** 
-    # ***** YOU ARE HERE ***** 
-    # ***** YOU ARE HERE ***** 
+        if k == mdb:
+            filtered_list = [f for f in current_files if f.startswith(prefixes[mdb])]
+
+            sat_required[k] = set([str(f.split(prefixes[mdb])[1][:5]) for f in filtered_list])
+            
+        elif k == shp:
+            filtered_list = [f for f in current_files if f.startswith(prefixes[shp])]
+
+            sat_required[k] = set([str(f.split(prefixes[shp])[1][:5]) for f in filtered_list])
+
+    # Print All The Things to make sure our output is what we expect
+    print(f"\nOutput of get_sat_required {sat}:")
+    for k, v in sat_required.items():
+        print(f"\tKey: {k}, value: {v}")
 
     return sat_required
+
+
+
+########## ########## ########## 
+
+def archive_old(satellite_dirs, ext):
+    
+    # Construct the path to the "Old to delete" dir
+    # This is a subfolder within the dir
+    # to which we want to copy the new files
+    archive = Path(satellite_dirs[ext], "Old to Delete")
+
+    # If it exists (as it should), delete it and all files in it
+    if os.path.exists(archive):
+        shutil.rmtree(archive)
+
+    # Then remake it so it's a fresh folder w/no files in it
+    os.makedirs(archive, exist_ok=True)
+
+    # For all the files in the current directory
+    # (Do I need to narrow this down at all...?)
+    current_files = os.listdir(satellite_dirs[ext])
+
+    # Iterate through all the files currently in our working dir
+    for c in current_files:
+
+        # Construct the string for where the existing file
+        move_path = Path(satellite_dirs[ext], c)
+
+        # Construct the string for the future archived file
+        moved_path = Path(satellite_dirs[ext], archive, c)
+
+        # If it isn't a file (i.e. if it's a dir) don't touch it
+        if not os.path.isfile(move_path):
+            continue
+
+        # Otherwise move it to the archive
+        shutil.move(move_path, moved_path)
+
+
+
+########## ########## ########## 
+
+def copy_file(in_file, to_dir):
+
+    #try:
+        #arcpy.management.Copy(in_file, out_file)
+
+    # YES I KNOW...will expand later
+    #except Exception as e:
+        #print(e)
+
+    try:
+        shutil.copy(in_file, to_dir)
+
+    # YES I KNOW...will expand later
+    except Exception as e:
+        print(e)
 
 
 
@@ -223,30 +388,31 @@ def get_sat_required():
 # Iterate through all the  satellite field office servers,
 # generate lists of the specific files they need if applicable,
 # Then copy the appropriate files
-def iter_satellites(mothership_filepaths, satellite_list, cleanup_list):
+def iter_satellites(mothership_filepaths, satellite_list):
 
     for sat in satellite_list:
-
-        # TO DO: all the things
 
         # Rest of this script assumes we get the full server host name here
         satellite_dirs = get_satellite_dirs(sat)
 
-        # Toss in the satellite directories as we iter through them
-        for v in satellite_dirs.values():
-            cleanup_list.append(v)
+        # Get the list of 5-char codes ALREADY IN the dirs...
+        sat_required = get_sat_required(satellite_dirs, sat)
 
-        # TO DO: get the list of files ALREADY IN the dirs...
-        # back-burnering this for now in favor of just getting the file copying working
-        sat_required = get_sat_required()
+        # Iterate through the 5-char codes in the dest dir
+        for ext, code_list in sat_required.items():
 
-        for extension, path_list in mothership_filepaths.items():
-            for path in path_list:
-                if path in sat_required:
-                    continue
-                copy_file(path, satellite_dirs[extension])
+            # Archive any files currently in the destination dir
+            archive_old(satellite_dirs, ext)
 
-    return cleanup_list
+            # For each 5-char code
+            for code in code_list:
+
+                # For each individual file containing that 5-char code
+                # (This iters once for mdbs, but multiple times for shps)
+                for path in mothership_filepaths[ext][code]:
+
+                    # Do the thing
+                    copy_file(path, satellite_dirs[ext])
 
 
 
@@ -263,5 +429,5 @@ mothership_filepaths = get_filepaths(mothership_dirs)
 
 satellite_list = get_satellites(satellite_source)
 
-cleanup_list = iter_satellites(mothership_filepaths, satellite_list, cleanup_list)
+iter_satellites(mothership_filepaths, satellite_list)
 

@@ -350,14 +350,23 @@ def get_satellites(satellite_table):
 
 ########## ########## ########## 
 
+# This is called once for every satellite within the list of
+# satellite field offices (i.e. not the main office)
+# It constructs a dictionary of extension: directory key/value pairs
+# In the same manner as we did for mothership;
+# made it a different function though since full dirs differ slightly
 def get_satellite_dirs(satellite):
 
+    # For this satellite, full path to where mdbs reside
     mdb_dir = Path(get_root(satellite), "FOTG", "Section_II")
 
+    # For this satellite, path to full path to where shps reside
     shp_dir = Path(get_root(satellite), "geodata", "soils")
 
+    # Put it together and what've you got, bippity boppity boo
     satellite_dirs = {mdb: mdb_dir, shp: shp_dir}
 
+    # Print All The Things to make sure our output is what we expect
     print(f"\nOutput of get_satellite_dirs({satellite}):")
     for k, v in satellite_dirs.items():
         print(f"\tKey: {k}, value: {v}")
@@ -368,25 +377,32 @@ def get_satellite_dirs(satellite):
 
 ########## ########## ########## 
 
-# Figure out which fo need which files
+# For each satellite office, we must figure out what files,
+# of all possible files that we could copy there, are actually needed
+# We do this by looking at what files are already in these dirs
+# Specifically we look at the 5-char codes within the filenames in these dirs
+# This function is called once for each satellite field office,
+# returns a dict (keys: mdb, shp) of 5-char codes representing the files we need
 def get_sat_required(satellite_dirs, sat):
 
+    # Initialize empty dict
     sat_required = {}
 
+    # Iterate through both mdb and shp dirs for the given satellite
     for k, v in satellite_dirs.items():
 
+        # Create a list of all files of the required type within this dir
         current_files = [f for f in os.listdir(v) if f.endswith(k)]
 
-        if k == mdb:
-            filtered_list = [f for f in current_files if f.startswith(prefixes[mdb])]
+        # Create a new list by filtering the above list; we only want files
+        # that include our specified prefix
+        filtered_list = [f for f in current_files if f.startswith(prefixes[k])]
 
-            sat_required[k] = set([str(f.split(prefixes[mdb])[1][:5]) for f in filtered_list])
-            
-        elif k == shp:
-            filtered_list = [f for f in current_files if f.startswith(prefixes[shp])]
-
-            sat_required[k] = set([str(f.split(prefixes[shp])[1][:5]) for f in filtered_list])
-
+        # A little fancy footwork to chop up the file path, get the 5-char code,
+        # stuff it in a list, then cast to set because I don't need or want dups;
+        # finally stuff the set as value in dict w/extension as key for easy reference
+        sat_required[k] = set([str(f.split(prefixes[k])[1][:5]) for f in filtered_list])
+        
     # Print All The Things to make sure our output is what we expect
     print(f"\nOutput of get_sat_required {sat}:")
     for k, v in sat_required.items():
@@ -398,6 +414,11 @@ def get_sat_required(satellite_dirs, sat):
 
 ########## ########## ########## 
 
+# Current functionality here is to delete any preexisting 
+# archive folders & contents, re-create archive folder, then shunt
+# everything currently in the main dir into the archive dir.
+# Currently we are NOT deleeting anything in the archive dir
+# at the end of the script, for just-in-case incidents
 def archive_old(satellite_dirs, ext):
     
     # Construct the path to the "Old to delete" dir
@@ -412,7 +433,7 @@ def archive_old(satellite_dirs, ext):
     # Then remake it so it's a fresh folder w/no files in it
     os.makedirs(archive, exist_ok=True)
 
-    # For all the files in the current directory
+    # Get all the files in the current directory
     # (Do I need to narrow this down at all...?)
     current_files = os.listdir(satellite_dirs[ext])
 
@@ -491,4 +512,3 @@ mothership_filepaths = assemble_filepaths(mdb_filepaths, shp_filepaths)
 satellite_list = get_satellites(satellite_table)
 
 iter_satellites(mothership_filepaths, satellite_list)
-

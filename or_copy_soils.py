@@ -195,16 +195,47 @@ def get_mdb_filepaths(mdb_dir):
 
 ########## ########## ########## 
 
+# Hahaha just because I don't have to flatten the shp dir
+# DOES NOT MEAN IT'S ALREADY FLAT. It's not. Joke's on me.
+# But not a big deal; I just don't get to use the one-liner.
+# Instead this handy function just roots through the mothership soils dir
+# and grabs the files from the subdirs, which are only 1 level deep
+def get_pre_prepaths(shp_dir):
+
+    # List to hold the actual filepaths
+    pre_prepaths = []
+
+    # List comprehension to get everything I care about within soils dir
+    pre_subdirs = [str(Path(shp_dir, f)) for f in os.listdir(shp_dir) if f.startswith("soil_")]
+
+    # Just kidding I have to make sure the things I care about are actually dirs
+    soil_subdirs = [f for f in pre_subdirs if os.path.isdir(f)]
+
+    # Now just iter through those dirs...
+    for dir in soil_subdirs:
+
+        # ...get all the full paths I care about...
+        sub_paths = [str(Path(dir, f)) for f in os.listdir(dir) if f.startswith(prefixes[shp])]
+
+        # ...and ongoingly smash them into our list
+        pre_prepaths.extend(sub_paths)
+
+    return pre_prepaths
+
+
+
+########## ########## ########## 
+
 # This function applies datestamps to shapefiles,
 # First by building the appropriate strings
 # then actually renaming the files
-def apply_datestamps(preprepaths):
+def apply_datestamps(pre_prepaths):
 
     # Empty list to hold pre-filepaths
     prepaths = []
 
     # Iterate PRE-pre-paths (which are the preexisting files)
-    for p in preprepaths:
+    for p in pre_prepaths:
 
         # If the file hasn't already been datestamped, stamp it
         if not date_stamp in p:
@@ -251,10 +282,10 @@ def get_shp_filepaths(shp_dir):
     # Not sure if that could be an issue or not; for the time being
     # we are assuming that shapefile components are the ONLY ITEMS 
     # that will be found in this directory
-    preprepaths = [str(Path(shp_dir, f)) for f in os.listdir(shp_dir) if prefixes[shp] in f]
+    pre_prepaths = get_pre_prepaths(shp_dir)
 
     # Do the apply_datestamps boogie
-    prepaths = apply_datestamps(preprepaths)
+    prepaths = apply_datestamps(pre_prepaths)
 
     # Once we have the prepaths, shuffle everything into the dict we have ready
     for p in prepaths:
@@ -312,6 +343,7 @@ def assemble_filepaths(mdb_filepaths, shp_filepaths):
                 print(f"\t\t\t{x}")
                   
     return filepaths
+
 
 
 ########## ########## ########## 
@@ -522,3 +554,4 @@ mothership_filepaths = assemble_filepaths(mdb_filepaths, shp_filepaths)
 satellite_list = get_satellites(satellite_table)
 
 iter_satellites(mothership_filepaths, satellite_list)
+

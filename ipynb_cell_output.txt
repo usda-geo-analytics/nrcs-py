@@ -1,0 +1,68 @@
+Including a plain txt file of the print/outputs of the notebook to clarify the structure of some of the inputs/outputs
+
+**********************************************************************************************************************
+
+Output of get_mothership_dirs() (var mothership_dirs):
+	Key: download, value: C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_F\data\download
+	Key: .mdb, value: C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_F\data\FOTG\Section_II\FY24
+	Key: .shp, value: C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_F\data\geodata\soils
+
+Output of get_filepaths (var filepaths):
+	Key: .mdb, Values:
+		Subkey: or003, Values:
+			C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_F\data\FOTG\Section_II\FY24\soil_d_or003_FY24.mdb
+		Subkey: or007, Values:
+			C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_F\data\FOTG\Section_II\FY24\soil_d_or007_FY24.mdb
+		Subkey: or009, Values:
+			C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_F\data\FOTG\Section_II\FY24\soil_d_or009_FY24.mdb
+	Key: .shp, Values:
+		Subkey: or003, Values:
+			C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_F\data\geodata\soils\soilmu_a_or003_202409.cpg
+			C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_F\data\geodata\soils\soilmu_a_or003_202409.dbf
+			C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_F\data\geodata\soils\soilmu_a_or003_202409.prj
+			C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_F\data\geodata\soils\soilmu_a_or003_202409.shp
+			C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_F\data\geodata\soils\soilmu_a_or003_202409.shp.xml
+			C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_F\data\geodata\soils\soilmu_a_or003_202409.shx
+		Subkey: or007, Values:
+			C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_F\data\geodata\soils\soilmu_a_or007_202409.cpg
+			C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_F\data\geodata\soils\soilmu_a_or007_202409.dbf
+			C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_F\data\geodata\soils\soilmu_a_or007_202409.prj
+			C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_F\data\geodata\soils\soilmu_a_or007_202409.shp
+			C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_F\data\geodata\soils\soilmu_a_or007_202409.shp.xml
+			C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_F\data\geodata\soils\soilmu_a_or007_202409.shx
+		Subkey: or009, Values:
+			C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_F\data\geodata\soils\soilmu_a_or009_202409.cpg
+			C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_F\data\geodata\soils\soilmu_a_or009_202409.dbf
+			C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_F\data\geodata\soils\soilmu_a_or009_202409.prj
+			C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_F\data\geodata\soils\soilmu_a_or009_202409.shp
+			C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_F\data\geodata\soils\soilmu_a_or009_202409.shp.xml
+			C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_F\data\geodata\soils\soilmu_a_or009_202409.shx
+
+Output of get_satellites (satellite_list):
+	_field_office_1
+	_field_office_2
+	_field_office_3
+
+Output of get_satellite_dirs(_field_office_1):
+	Key: .mdb, value: C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_field_office_1\data\FOTG\Section_II
+	Key: .shp, value: C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_field_office_1\data\geodata\soils
+
+Output of get_sat_required _field_office_1:
+	Key: .mdb, value: {'or003'}
+	Key: .shp, value: {'or003'}
+
+Output of get_satellite_dirs(_field_office_2):
+	Key: .mdb, value: C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_field_office_2\data\FOTG\Section_II
+	Key: .shp, value: C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_field_office_2\data\geodata\soils
+
+Output of get_sat_required _field_office_2:
+	Key: .mdb, value: {'or007'}
+	Key: .shp, value: {'or007'}
+
+Output of get_satellite_dirs(_field_office_3):
+	Key: .mdb, value: C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_field_office_3\data\FOTG\Section_II
+	Key: .shp, value: C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir\_field_office_3\data\geodata\soils
+
+Output of get_sat_required _field_office_3:
+	Key: .mdb, value: {'or009'}
+	Key: .shp, value: {'or009'}

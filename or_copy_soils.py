@@ -334,7 +334,7 @@ def get_satellites(satellite_table):
     # NOTE: In order to test getting data from an ArcGIS Service table
     # but still without access to UNC dir for testing, I'm hard-coding
     # the real-deal OR mothership server name here for now. Long story.
-    # I swear there is a method to the madness. In the final version this
+    # I swear there is a method to the madness. In the non-test version this
     # would not be hard-coded but would just be the "mothership" var
     if "aioorpo23fp1" in satellite_list:
         satellite_list.remove("aioorpo23fp1")
@@ -457,30 +457,40 @@ def archive_old(satellite_dirs, ext):
 
 ########## ########## ########## 
 
-# Iterate through all the  satellite field office servers,
-# generate lists of the specific files they need if applicable,
-# Then copy the appropriate files
+# Iterate through the list of all field office servers
+# (that are not the mothership/state office server)
+# For each office, get the directories where the mdbs and shps go,
+# look through all the files currently in those dirs,
+# get a set of the 5-digit codes for those files
+# which are ostensibly the files that this field office needs),
+# archive all the current files to a subdir we (re)create,
+# then use our lookup dict to copy the fresh 
+# appropriate/required files to the current dir
 def iter_satellites(mothership_filepaths, satellite_list):
 
     for sat in satellite_list:
 
-        # Rest of this script assumes we get the full server host name here
+        # Call to the function to get the pair of dirs for mdbs and shps
         satellite_dirs = get_satellite_dirs(sat)
 
-        # Get the list of 5-char codes ALREADY IN the dirs...
+        # Call to the function to get the 5-char codes for the files
+        # already in both those dirs
         sat_required = get_sat_required(satellite_dirs, sat)
 
-        # Iterate through the 5-char codes in the dest dir
-        for ext, code_list in sat_required.items():
+        # Iter through the dict containing the 5-char codes
+        for ext, code_set in sat_required.items():
 
-            # Archive any files currently in the destination dir
+            # Call to function to archive files currently this dir
             archive_old(satellite_dirs, ext)
 
-            # For each 5-char code
-            for code in code_list:
+            # For each 5-char code:
+            for code in code_set:
 
-                # For each individual file containing that 5-char code
-                # (This iters once for mdbs, but multiple times for shps)
+                # Here we begin iterating through the master list of
+                # all possible files that could be copied--or rather,
+                # we look at the master files FOR THE CURRENT extension,
+                # for the current 5-char code, and copy only those
+                # to the current satellite dir
                 for path in mothership_filepaths[ext][code]:
 
                     # Try the copy thing

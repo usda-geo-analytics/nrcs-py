@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 import datetime
 import shutil
+import sys
 import arcpy
 
 
@@ -21,10 +22,41 @@ def print_n_log(message):
 ########## ########## ########## 
 
 # Open our log file and add a heading with date/time stamp
-def open_log():
+# This will virtually ALWAYS create a new file (not overwrite)
+# because the datetime stamp in the filename includes hour|minute|second
+def open_log(log_dir):
 
-    log_file = open(Path(log_dir, f"OR_CopySoils_Log{datetime_stamp}.txt"), "a")
-    log_file.write(f"\nHEREIN BEGINS THE LOGGING (Date / Time: {datetime_stamp})\n")
+    # Check if the parameter exists; if it doesn't; make it:
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir, exist_ok=True)
+
+    # Check to make sure they supplied a dir not a file;
+    # If they supplied a filepath, scold them:
+    if not os.path.isdir(log_dir):
+        arcpy.AddMessage("""\nWarning! The log directory supplied is not a valid directory.
+                         \n(Did you specify a full file path?)
+                         \nA new log file will be generated in the filepath's directory.\n""")
+        
+        # If they supplied a filepath, use the dir the file is in
+        # to make the new log file; no hard feelings
+        if os.path.isfile(log_dir):
+            new_dir = os.path.dirname(log_dir)
+            log_dir = new_dir
+
+    # Still wrap in try, because the answer to "What could go wrong??" IS NEVER "nothing"
+    try:
+        log_file = open(Path(log_dir, f"OR_CopySoils_Log{datetime_stamp}.txt"), "a")
+        log_file.write(f"""\nHEREIN BEGINS THE LOGGING FOR THE OREGON COPY SOILS SCRIPT
+                       (Date / Time: {datetime_stamp})\n""")
+
+    # Print our message and the exception using arcpy
+    except Exception as e:
+        arcpy.AddMessage("""
+                         \nThere was an error opening the log file;
+                         \nplease confirm the log directory you supplied is correct and accessible!
+                         \nScript will exit.\n""")
+        arcpy.AddMessage(f"\n{e}\n")
+        sys.exit()
     
     return log_file
 
@@ -96,7 +128,7 @@ def get_mothership_dirs():
     #for k, v in mothership_dirs.items():
         #print(f"\tKey: {k}, value: {v}")
 
-    print_n_log(f"\nSuccessfully retrieved MDB and SHP directories for state office {mothership}\n")
+    print_n_log(f"\nSuccessfully retrieved MDB and SHP directories for state office '{mothership}'\n")
 
     return mothership_dirs
 
@@ -109,7 +141,10 @@ def get_mothership_dirs():
 def consolidate_mdbs():
 
     # Make the new consolidated FY dir if it does not already exist
-    os.makedirs(mothership_dirs[mdb], exist_ok= True)
+    try:
+        os.makedirs(mothership_dirs[mdb], exist_ok= True)
+    except Exception as e:
+        print_n_log(f"\n{e}\n")
 
     # Walk the dir where all the mdb files currently reside (among various subfolders)
     for root, dirs, files in os.walk(mothership_dirs["download"]):
@@ -138,7 +173,7 @@ def consolidate_mdbs():
                 # (I will expand/fix this block I swear)
                 except Exception as e:
                     print_n_log(f"\n\tERROR: The attempt to copy the file:\n\t{from_path} \n\t...to:\n\t{to_path}\n\t...resulted in the following error:\n")
-                    print_n_log(f"\n\t{e}")
+                    print_n_log(f"\n\t{e}\n")
 
     print_n_log("\nSuccessfully consolidated state office MDB files\n")
 
@@ -244,7 +279,10 @@ def apply_datestamps(pre_prepaths):
                 dated = f"{date_stamp}.".join(p.rsplit(".", 1))
 
             # ...Can't forget to actually rename the file itself
-            os.replace(p, dated)
+            try:
+                os.replace(p, dated)
+            except Exception as e:
+                print_n_log(f"\n{e}\n")
 
         # Otherwise if the file's already stamped, carry on
         else:
@@ -354,7 +392,10 @@ def get_satellites():
     search_field = "FieldOffices"
 
     # Just get all the values of this field for all the rows in the table
-    satellite_list = [row[0] for row in arcpy.da.SearchCursor(satellite_table, search_field)]
+    try:
+        satellite_list = [row[0] for row in arcpy.da.SearchCursor(satellite_table, search_field)]
+    except Exception as e:
+        print_n_log(f"\n{e}\n")
 
     # We are copying FROM mothership so exclude her
     # from the list of copy TO hosts
@@ -400,7 +441,7 @@ def get_satellite_dirs(satellite):
     #for k, v in satellite_dirs.items():
         #print(f"\tKey: {k}, value: {v}")
 
-    print_n_log(f"\nSuccessfully retrieved MDB and SHP directories for field office {satellite}\n")
+    print_n_log(f"\nSuccessfully retrieved MDB and SHP directories for field office '{satellite}'\n")
 
     return satellite_dirs
 
@@ -439,7 +480,7 @@ def get_sat_required(satellite_dirs, sat):
     #for k, v in sat_required.items():
         #print(f"\tKey: {k}, value: {v}")
 
-    print_n_log(f"\nSuccessfully retrieved required 5-char codes for field office {sat}\n")
+    print_n_log(f"\nSuccessfully retrieved required 5-char codes for field office '{sat}'\n")
 
     return sat_required
 
@@ -461,10 +502,16 @@ def archive_old(satellite_dirs, ext):
 
     # If it exists (as it should), delete it and all files in it
     if os.path.exists(archive):
-        shutil.rmtree(archive)
+        try:
+            shutil.rmtree(archive)
+        except Exception as e:
+            print_n_log(f"\n{e}\n")
 
     # Then remake it so it's a fresh folder w/no files in it
-    os.makedirs(archive, exist_ok=True)
+    try:
+        os.makedirs(archive, exist_ok=True)
+    except Exception as e:
+        print_n_log(f"\n{e}\n")
 
     # Get all the files in the current directory
     # (Do I need to narrow this down at all...?)
@@ -534,10 +581,9 @@ def iter_satellites():
                         print_n_log(f"\n\tSUCCESS: The file:\n\t{path} \n\t...was successfully copied to:\n\t{satellite_dirs[ext]}\n")
 
                     # If it didn't work, deal with that it didn't work
-                    # (I will expand/fix this block I swear)
                     except Exception as e:
                         print_n_log(f"\n\tERROR: The attempt to copy the file:\n\t{path} \n\t...to:\n\t{satellite_dirs[ext]} \n\t...resulted in the following error:\n")
-                        print_n_log(f"\n\t{e}")
+                        print_n_log(f"\n\t{e}\n")
     
     print_n_log(f"\nSuccessfully iterated all field office directories\n")
 
@@ -593,7 +639,7 @@ if __name__ == "__main__":
     # DO THE THING
     # I.E. ALL THE CALLS
 
-    log_file = open_log()
+    log_file = open_log(log_dir)
 
     mothership = get_mothership()
 

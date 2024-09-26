@@ -9,6 +9,29 @@ import arcpy
 ########## ########## ########## ########## ########## ########## 
 # TOOL FUNCTIONS
 
+# For anything we want to print, just call this function
+# to add both an arcpy message and write it to the log file
+def print_n_log(message):
+
+    arcpy.AddMessage(message)
+    log_file.write(message)
+
+
+
+########## ########## ########## 
+
+# Open our log file and add a heading with date/time stamp
+def open_log():
+
+    log_file = open(Path(log_dir, f"OR_CopySoils_Log{datetime_stamp}.txt"), "a")
+    log_file.write(f"\nHEREIN BEGINS THE LOGGING (Date / Time: {datetime_stamp})\n")
+    
+    return log_file
+
+
+
+########## ########## ########## 
+
 # "Path" only works with full "\\host\share" path and "data" is the share
 def get_mothership():
 
@@ -69,9 +92,11 @@ def get_mothership_dirs():
     mothership_dirs = {"download": download_dir, mdb: mdb_dir, shp: shp_dir}
 
     # Print All The Things to make sure our output is what we expect
-    print("\nOutput of get_mothership_dirs() (var mothership_dirs):")
-    for k, v in mothership_dirs.items():
-        print(f"\tKey: {k}, value: {v}")
+    #print("\nOutput of get_mothership_dirs() (var mothership_dirs):")
+    #for k, v in mothership_dirs.items():
+        #print(f"\tKey: {k}, value: {v}")
+
+    print_n_log(f"\nSuccessfully retrieved MDB and SHP directories for state office {mothership}\n")
 
     return mothership_dirs
 
@@ -107,11 +132,15 @@ def consolidate_mdbs():
                 # Try the copy thing
                 try:
                     shutil.copy(from_path, to_path)
+                    print_n_log(f"\n\tSUCCESS: The file:\n\t{from_path} \n\t...was successfully copied to:\n\t{to_path}\n")
 
                 # If it didn't work, deal with that it didn't work
                 # (I will expand/fix this block I swear)
                 except Exception as e:
-                    print(e)
+                    print_n_log(f"\n\tERROR: The attempt to copy the file:\n\t{from_path} \n\t...to:\n\t{to_path}\n\t...resulted in the following error:\n")
+                    print_n_log(f"\n\t{e}")
+
+    print_n_log("\nSuccessfully consolidated state office MDB files\n")
 
 
 
@@ -147,6 +176,8 @@ def get_mdb_filepaths(mdb_dir):
             # toward the end of get_shp_filepaths function
             mdb_filepaths[chop[1][:5]] = [p]
 
+    print_n_log("\nSuccessfully retrieved state office MDB filepaths\n")
+
     return mdb_filepaths
 
 
@@ -177,6 +208,8 @@ def get_pre_prepaths(shp_dir):
 
         # ...and ongoingly smash them into our list
         pre_prepaths.extend(sub_paths)
+
+    print_n_log("\nSuccessfully assembled SHP prepaths\n")
 
     return pre_prepaths
 
@@ -219,6 +252,8 @@ def apply_datestamps(pre_prepaths):
 
         # Add the datestamped file path string to our list
         prepaths.append(dated)
+
+    print_n_log("\nSuccessfully applied datestamps to SHPs\n")
 
     return prepaths
 
@@ -274,6 +309,8 @@ def get_shp_filepaths(shp_dir):
             else:
                 shp_filepaths[key_code].append(p)
 
+    print_n_log("\nSuccessfully retrieved state office SHP filepaths\n")
+
     return shp_filepaths
 
 
@@ -291,15 +328,16 @@ def assemble_filepaths():
     filepaths = {mdb: mdb_filepaths, shp: shp_filepaths}
 
     # Print All The Things to make sure our output is what we expect
-    print(f"\nOutput of get_filepaths (var filepaths):")
-
-    for k, val in filepaths.items():
-        print(f"\tKey: {k}, Values:")
-        for x, y in val.items():
-            print(f"\t\tSubkey: {x}, Values:")
-            for x in y:
-                print(f"\t\t\t{x}")
+    #print(f"\nOutput of get_filepaths (var filepaths):")
+    #for k, val in filepaths.items():
+        #print(f"\tKey: {k}, Values:")
+        #for x, y in val.items():
+            #print(f"\t\tSubkey: {x}, Values:")
+            #for x in y:
+                #print(f"\t\t\t{x}")
                   
+    print_n_log("\nSuccessfully assembled ALL filepaths\n")
+
     return filepaths
 
 
@@ -329,9 +367,11 @@ def get_satellites():
         satellite_list.remove("aioorpo23fp1")
 
     # Print All The Things to make sure our output is what we expect
-    print("\nOutput of get_satellites (satellite_list):")
-    for s in satellite_list:
-        print(f"\t{s}")
+    #print("\nOutput of get_satellites (satellite_list):")
+    #for s in satellite_list:
+        #print(f"\t{s}")
+
+    print_n_log("\nSuccessfully retrieved field office server names\n")
 
     return satellite_list
 
@@ -356,9 +396,11 @@ def get_satellite_dirs(satellite):
     satellite_dirs = {mdb: mdb_dir, shp: shp_dir}
 
     # Print All The Things to make sure our output is what we expect
-    print(f"\nOutput of get_satellite_dirs({satellite}):")
-    for k, v in satellite_dirs.items():
-        print(f"\tKey: {k}, value: {v}")
+    #print(f"\nOutput of get_satellite_dirs({satellite}):")
+    #for k, v in satellite_dirs.items():
+        #print(f"\tKey: {k}, value: {v}")
+
+    print_n_log(f"\nSuccessfully retrieved MDB and SHP directories for field office {satellite}\n")
 
     return satellite_dirs
 
@@ -393,9 +435,11 @@ def get_sat_required(satellite_dirs, sat):
         sat_required[k] = set([str(f.split(prefixes[k])[1][:5]) for f in filtered_list])
         
     # Print All The Things to make sure our output is what we expect
-    print(f"\nOutput of get_sat_required {sat}:")
-    for k, v in sat_required.items():
-        print(f"\tKey: {k}, value: {v}")
+    #print(f"\nOutput of get_sat_required {sat}:")
+    #for k, v in sat_required.items():
+        #print(f"\tKey: {k}, value: {v}")
+
+    print_n_log(f"\nSuccessfully retrieved required 5-char codes for field office {sat}\n")
 
     return sat_required
 
@@ -442,6 +486,8 @@ def archive_old(satellite_dirs, ext):
         # Otherwise move it to the archive
         shutil.move(move_path, moved_path)
 
+    print_n_log(f"\nSuccessfully archived preexisting files\n")
+
 
 
 ########## ########## ########## 
@@ -485,16 +531,19 @@ def iter_satellites():
                     # Try the copy thing
                     try:
                         shutil.copy(path, satellite_dirs[ext])
+                        print_n_log(f"\n\tSUCCESS: The file:\n\t{path} \n\t...was successfully copied to:\n\t{satellite_dirs[ext]}\n")
 
                     # If it didn't work, deal with that it didn't work
                     # (I will expand/fix this block I swear)
                     except Exception as e:
-                        print(e)
+                        print_n_log(f"\n\tERROR: The attempt to copy the file:\n\t{path} \n\t...to:\n\t{satellite_dirs[ext]} \n\t...resulted in the following error:\n")
+                        print_n_log(f"\n\t{e}")
+    
+    print_n_log(f"\nSuccessfully iterated all field office directories\n")
 
 
 
 if __name__ == "__main__":
-
 
     ########## ########## ########## ########## ########## ########## 
     # INPUT PARAMETERS
@@ -504,26 +553,32 @@ if __name__ == "__main__":
     # (Construction of path for each is slightly different)
     test_local = arcpy.GetParameterAsText(0)
 
+    # This dir is only ever referenced for testing
+    test_dir = arcpy.GetParameterAsText(1)
+
     # Built in a means to test retrieval of all field office host names from table service
     # Just replace this URL with URL to table service (including layer index!)
-    satellite_table = arcpy.GetParameterAsText(1)
+    satellite_table = arcpy.GetParameterAsText(2)
     # satellite_table = r"https://services.arcgis.com/LLVEmB8Lsae3Um4s/arcgis/rest/services/NRCS_CopySoils_FieldOffices/FeatureServer/0"
 
     # FY stamp to append to MDBs
     # Now that this is a parameter I should do at least a little validation on it...
-    fy = arcpy.GetParameterAsText(2)
+    fy = arcpy.GetParameterAsText(3)
     fy_stamp = f"_FY{fy}"
+
+    # Directory where log file should be created
+    log_dir = arcpy.GetParameterAsText(4)
 
 
 
     ########## ########## ########## ########## ########## ########## 
     # NON-INPUT PARAMETERS
 
-    # This dir is only ever referenced for testing
-    test_dir = r"C:\Users\misti.wudtke\OneDrive - USDA\PYTHON\NRCSPY\copy_soils\working_dir"
-
-    # Provides datestamp string in the format of "_YYYYMMDD", ready to append
+    # Provides datestamp string in the format of "_YYYYMM", ready to append
     date_stamp = datetime.datetime.now().strftime("_%Y%m")
+
+    # Provides datestamp string in the format of "_YYYYMMDD-HHMMSS", more fine-grain for logging
+    datetime_stamp = datetime.datetime.now().strftime("_%Y%m%d-%I%M%S%p")
 
     # To avoid hard-coded strings everywhere
     mdb = ".mdb"
@@ -537,6 +592,8 @@ if __name__ == "__main__":
     ########## ########## ########## ########## ########## ########## 
     # DO THE THING
     # I.E. ALL THE CALLS
+
+    log_file = open_log()
 
     mothership = get_mothership()
 
@@ -553,3 +610,8 @@ if __name__ == "__main__":
     satellite_list = get_satellites()
 
     iter_satellites()
+
+    print_n_log(f"\nScript completed successfully\n")
+    
+    log_file.close()
+

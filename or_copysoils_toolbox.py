@@ -123,11 +123,6 @@ def get_mothership_dirs():
     # Assemble the dictionary
     mothership_dirs = {"download": download_dir, mdb: mdb_dir, shp: shp_dir}
 
-    # Print All The Things to make sure our output is what we expect
-    #print("\nOutput of get_mothership_dirs() (var mothership_dirs):")
-    #for k, v in mothership_dirs.items():
-        #print(f"\tKey: {k}, value: {v}")
-
     print_n_log(f"\nSuccessfully retrieved MDB and SHP directories for state office '{mothership}'\n")
 
     return mothership_dirs
@@ -364,15 +359,6 @@ def assemble_filepaths():
 
     # One-liner assembling the dict of dicts
     filepaths = {mdb: mdb_filepaths, shp: shp_filepaths}
-
-    # Print All The Things to make sure our output is what we expect
-    #print(f"\nOutput of get_filepaths (var filepaths):")
-    #for k, val in filepaths.items():
-        #print(f"\tKey: {k}, Values:")
-        #for x, y in val.items():
-            #print(f"\t\tSubkey: {x}, Values:")
-            #for x in y:
-                #print(f"\t\t\t{x}")
                   
     print_n_log("\nSuccessfully assembled ALL filepaths\n")
 
@@ -387,13 +373,28 @@ def assemble_filepaths():
 # come from an attribute field in a feature service
 def get_satellites():
 
-    # The field in the table containing the names of all the field offices
-    # This is currently a real field name but in a dummy/testing table
-    search_field = "FieldOffices"
+    # Construct an SQL query with appropriate delimiters
+    # for use in the case of just wanting to run on
+    # a subset of field offices (i.e. for testing)
+
+    # Blerg, "multi value" parameter returns...not a python list.
+    # So we make it a list...this can't be the pythonic way to do this...
+    fo_parsed = [f.strip("'") for f in fo_subset.split(";")]
+
+    # If the user left the default 'All offices',
+    # Then the query is simply the asterisk, which returns the whole field:
+    if fo_parsed == ["All offices"]:
+        query = "*"
+    
+    # Otherwise the query is the list of field offices the user provided
+    else:
+        delimited_field = arcpy.AddFieldDelimiters(satellite_table, search_field)
+        query = f'{delimited_field} IN {fo_parsed}'
 
     # Just get all the values of this field for all the rows in the table
+    # OR...(with the addition of the query), just get the subset the user wants
     try:
-        satellite_list = [row[0] for row in arcpy.da.SearchCursor(satellite_table, search_field)]
+        satellite_list = [row[0] for row in arcpy.da.SearchCursor(satellite_table, search_field, query)]
     except Exception as e:
         print_n_log(f"\n{e}\n")
 
@@ -404,13 +405,8 @@ def get_satellites():
     # the real-deal OR mothership server name here for now. Long story.
     # I swear there is a method to the madness. In the non-test version this
     # would not be hard-coded but would just be the "mothership" var
-    if "aioorpo23fp1" in satellite_list:
-        satellite_list.remove("aioorpo23fp1")
-
-    # Print All The Things to make sure our output is what we expect
-    #print("\nOutput of get_satellites (satellite_list):")
-    #for s in satellite_list:
-        #print(f"\t{s}")
+    if mothership in satellite_list:
+        satellite_list.remove(mothership)
 
     print_n_log("\nSuccessfully retrieved field office server names\n")
 
@@ -435,11 +431,6 @@ def get_satellite_dirs(satellite):
 
     # Put it together and what've you got, bippity boppity boo
     satellite_dirs = {mdb: mdb_dir, shp: shp_dir}
-
-    # Print All The Things to make sure our output is what we expect
-    #print(f"\nOutput of get_satellite_dirs({satellite}):")
-    #for k, v in satellite_dirs.items():
-        #print(f"\tKey: {k}, value: {v}")
 
     print_n_log(f"\nSuccessfully retrieved MDB and SHP directories for field office '{satellite}'\n")
 
@@ -474,11 +465,6 @@ def get_sat_required(satellite_dirs, sat):
         # stuff it in a list, then cast to set because I don't need or want dups;
         # finally stuff the set as value in dict w/extension as key for easy reference
         sat_required[k] = set([str(f.split(prefixes[k])[1][:5]) for f in filtered_list])
-        
-    # Print All The Things to make sure our output is what we expect
-    #print(f"\nOutput of get_sat_required {sat}:")
-    #for k, v in sat_required.items():
-        #print(f"\tKey: {k}, value: {v}")
 
     print_n_log(f"\nSuccessfully retrieved required 5-char codes for field office '{sat}'\n")
 
@@ -607,13 +593,17 @@ if __name__ == "__main__":
     satellite_table = arcpy.GetParameterAsText(2)
     # satellite_table = r"https://services.arcgis.com/LLVEmB8Lsae3Um4s/arcgis/rest/services/NRCS_CopySoils_FieldOffices/FeatureServer/0"
 
+    search_field = arcpy.GetParameterAsText(3)
+
+    fo_subset = arcpy.GetParameterAsText(4)
+
     # FY stamp to append to MDBs
     # Now that this is a parameter I should do at least a little validation on it...
-    fy = arcpy.GetParameterAsText(3)
+    fy = arcpy.GetParameterAsText(5)
     fy_stamp = f"_FY{fy}"
 
     # Directory where log file should be created
-    log_dir = arcpy.GetParameterAsText(4)
+    log_dir = arcpy.GetParameterAsText(6)
 
 
 
@@ -660,4 +650,3 @@ if __name__ == "__main__":
     print_n_log(f"\nScript completed successfully\n")
     
     log_file.close()
-
